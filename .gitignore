@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # Logs
 logs
 *.log
@@ -26,3 +27,7 @@ dist-ssr
 =======
 .venv
 >>>>>>> 1e2a668 (git ignore)
+=======
+.venv
+logs
+>>>>>>> a88f2e8 (ignore add)
