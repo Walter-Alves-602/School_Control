@@ -1,7 +1,22 @@
-# -*- coding: utf-8 -*-
-import paramiko
 
-def executar_comando_ssh(ip, usuario, senha, comando):
+# -*- coding: utf-8 -*-
+"""
+Módulo para execução de comandos remotos via SSH em máquinas Linux.
+"""
+import paramiko
+from typing import Tuple
+
+def executar_comando_ssh(ip: str, usuario: str, senha: str, comando: str) -> Tuple[str, str]:
+    """
+    Executa um comando remoto via SSH.
+    Args:
+        ip: Endereço IP do host remoto.
+        usuario: Usuário SSH.
+        senha: Senha SSH.
+        comando: Comando a ser executado.
+    Returns:
+        Uma tupla (saida, erro) com a saída padrão e erro padrão do comando.
+    """
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
