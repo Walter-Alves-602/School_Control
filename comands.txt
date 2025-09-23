@@ -1,0 +1,14 @@
+# Desabilitar suspensão temporariamente
+"systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target"
+
+# Ou usar caffeine (se instalado)
+"caffeine"
+
+# Manter o computador acordado por X horas
+"systemd-inhibit --what=sleep --who='SSH Session' --why='Prevent sleep' sleep 3600"
+
+# Simular tecla para acordar
+"echo 'enabled' > /sys/class/rtc/rtc0/wakealarm"
+
+# Ou usar xdotool (se X11 estiver rodando)
+"DISPLAY=:0 xdotool key space"
