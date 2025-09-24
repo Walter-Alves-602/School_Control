@@ -13,10 +13,7 @@ from csv_manager import (
 )
 from admin_tasks import (
     execute_poweroff,
-    install_package,
-    get_system_info,
     update_all_systems,
-    restart_computers,
 )
 
 

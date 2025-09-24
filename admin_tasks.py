@@ -50,21 +50,6 @@ def install_package(ip_generator: Iterator[str], password: str, package_name: st
     )
 
 
-def install_clonezilla(ip_generator: Iterator[str], password: str, username: str = "user") -> List[Tuple[str, bool, str]]:
-    """
-    Instala o Clonezilla em múltiplos computadores.
-    
-    Args:
-        ip_generator (Iterator[str]): Gerador de IPs
-        password (str): Senha do usuário
-        username (str): Nome do usuário
-    
-    Returns:
-        List[Tuple[str, bool, str]]: Resultados da execução
-    """
-    return install_package(ip_generator, password, "clonezilla", username)
-
-
 def get_system_info(ip_generator: Iterator[str], password: str, username: str = "user") -> List[Tuple[str, bool, str]]:
     """
     Coleta informações básicas do sistema dos computadores.
