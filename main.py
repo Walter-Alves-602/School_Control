@@ -1,183 +1,365 @@
 """
-Sistema de Controle de Computadores - Arquivo Principal
-Gerencia múltiplos computadores Linux Mint via SSH e Wake-on-LAN
+Sistema de Controle de Computadores por Salas - Arquivo Principal
+Gerencia múltiplos computadores via SSH e Wake-on-LAN organizados por salas
 """
 
-from ssh_manager import execute_ssh_command_on_multiple_hosts, generate_ip_range
-from power_manager import (keep_awake_temporarily)
+from ssh_manager import test_ssh_connection_by_sala
 from csv_manager import (
-    load_macs_from_csv,
-    get_ips_only,
-    wake_all_computers_from_csv,
-    find_mac_by_ip,
+    load_computers_from_csv,
+    list_salas_summary,
+    wake_computers_by_sala
 )
 from admin_tasks import (
-    execute_poweroff,
-    update_all_systems,
+    poweroff_sala,
+    restart_sala,
+    get_system_info_sala,
+    update_all_systems_sala,
+    install_package_sala,
+    execute_custom_command_sala
 )
+from sala_config import get_available_salas, get_sala_config
+
+
+def show_menu():
+    """Exibe o menu principal."""
+    print("\n" + "="*60)
+    print("🏫 SISTEMA DE CONTROLE DE COMPUTADORES POR SALAS")
+    print("="*60)
+    print("📋 GERENCIAMENTO DE SALAS:")
+    print("  1️⃣  Listar salas disponíveis")
+    print("  2️⃣  Wake-on-LAN por sala")
+    print("  3️⃣  Testar conectividade SSH")
+    print("  4️⃣  Informações do sistema")
+    print("\n🔧 ADMINISTRAÇÃO:")
+    print("  5️⃣  Desligar computadores")
+    print("  6️⃣  Reiniciar computadores")
+    print("  7️⃣  Atualizar sistemas")
+    print("  8️⃣  Instalar pacote")
+    print("  9️⃣  Comando personalizado")
+    print("  🔟 Manter acordado (temporário)")
+    print("\n📊 DIAGNÓSTICO:")
+    print("  11  Relatório completo de sala")
+    print("\n❌ 0   Sair")
+    print("-"*60)
+
+
+def show_salas_summary():
+    """Mostra resumo de todas as salas."""
+    print("\n📋 RESUMO DE SALAS:")
+    print("-"*50)
+    
+    # Salas do CSV
+    salas_csv = list_salas_summary()
+    if salas_csv:
+        print("📁 Salas encontradas no CSV:")
+        for sala, count in salas_csv.items():
+            config = get_sala_config(sala)
+            os_info = config.get('os', 'Não configurado') if config else 'Sem configuração'
+            print(f"   🏫 {sala}: {count} computadores ({os_info})")
+    else:
+        print("❌ Nenhuma sala encontrada no CSV")
+    
+    # Salas configuradas
+    salas_config = get_available_salas()
+    print(f"\n⚙️  Salas configuradas: {len(salas_config)}")
+    for sala in salas_config:
+        config = get_sala_config(sala)
+        print(f"   🔧 {sala}: {config['os']} - {config['username']}@port{config['ssh_port']}")
+
+
+def select_sala():
+    """Permite selecionar uma sala."""
+    salas_csv = list_salas_summary()
+    
+    if not salas_csv:
+        print("❌ Nenhuma sala encontrada no arquivo CSV!")
+        return None
+    
+    print("\n📋 Salas disponíveis:")
+    sala_list = list(salas_csv.keys())
+    
+    for i, sala in enumerate(sala_list, 1):
+        count = salas_csv[sala]
+        config = get_sala_config(sala)
+        os_info = config.get('os', 'Não configurado') if config else 'Sem configuração'
+        print(f"  {i}. {sala} ({count} computadores - {os_info})")
+    
+    while True:
+        try:
+            choice = input("\nEscolha a sala (número ou nome): ").strip()
+            
+            # Tenta por número
+            if choice.isdigit():
+                idx = int(choice) - 1
+                if 0 <= idx < len(sala_list):
+                    return sala_list[idx]
+            
+            # Tenta por nome
+            if choice in salas_csv:
+                return choice
+            
+            # Busca aproximada
+            for sala in salas_csv:
+                if choice.lower() in sala.lower():
+                    return sala
+            
+            print("❌ Sala não encontrada. Tente novamente.")
+            
+        except (ValueError, KeyboardInterrupt):
+            return None
+
+
+def wake_on_lan_menu():
+    """Menu para Wake-on-LAN."""
+    sala = select_sala()
+    if not sala:
+        return
+    
+    print(f"\n📡 Enviando Wake-on-LAN para sala '{sala}'...")
+    success_count = wake_computers_by_sala(sala, debug=True)
+    
+    if success_count > 0:
+        print(f"✅ Wake-on-LAN enviado para {success_count} computadores!")
+    else:
+        print("❌ Nenhum pacote Wake-on-LAN foi enviado.")
+
+
+def ssh_connectivity_menu():
+    """Menu para testar conectividade SSH."""
+    sala = select_sala()
+    if not sala:
+        return
+    
+    print(f"\n🔍 Testando conectividade SSH na sala '{sala}'...")
+    connectivity = test_ssh_connection_by_sala(sala)
+    
+    if connectivity:
+        connected = sum(connectivity.values())
+        total = len(connectivity)
+        print(f"\n📊 Resultado final: {connected}/{total} computadores conectados")
+        
+        if connected < total:
+            print("\n❌ Computadores sem conexão:")
+            for ip, status in connectivity.items():
+                if not status:
+                    print(f"   • {ip}")
+
+
+def system_info_menu():
+    """Menu para informações do sistema."""
+    sala = select_sala()
+    if not sala:
+        return
+    
+    print(f"\n🖥️  Coletando informações do sistema da sala '{sala}'...")
+    results = get_system_info_sala(sala)
+    
+    if results:
+        success_count = sum(1 for _, success, _ in results if success)
+        print(f"\n📊 Informações coletadas de {success_count}/{len(results)} computadores")
+
+
+def poweroff_menu():
+    """Menu para desligar computadores."""
+    sala = select_sala()
+    if not sala:
+        return
+    
+    confirm = input(f"\n⚠️  Confirma o DESLIGAMENTO de todos os computadores da sala '{sala}'? (sim/não): ")
+    if confirm.lower() not in ['sim', 's', 'yes', 'y']:
+        print("❌ Operação cancelada.")
+        return
+    
+    print(f"\n🔌 Desligando computadores da sala '{sala}'...")
+    results = poweroff_sala(sala)
+    
+    if results:
+        success_count = sum(1 for _, success, _ in results if success)
+        print(f"✅ Comando de desligamento enviado para {success_count}/{len(results)} computadores")
+
+
+def restart_menu():
+    """Menu para reiniciar computadores."""
+    sala = select_sala()
+    if not sala:
+        return
+    
+    confirm = input(f"\n⚠️  Confirma o REINÍCIO de todos os computadores da sala '{sala}'? (sim/não): ")
+    if confirm.lower() not in ['sim', 's', 'yes', 'y']:
+        print("❌ Operação cancelada.")
+        return
+    
+    print(f"\n🔄 Reiniciando computadores da sala '{sala}'...")
+    results = restart_sala(sala)
+    
+    if results:
+        success_count = sum(1 for _, success, _ in results if success)
+        print(f"✅ Comando de reinício enviado para {success_count}/{len(results)} computadores")
+
+
+def update_systems_menu():
+    """Menu para atualizar sistemas."""
+    sala = select_sala()
+    if not sala:
+        return
+    
+    confirm = input(f"\n⚠️  Confirma a ATUALIZAÇÃO de todos os computadores da sala '{sala}'? (sim/não): ")
+    if confirm.lower() not in ['sim', 's', 'yes', 'y']:
+        print("❌ Operação cancelada.")
+        return
+    
+    print(f"\n⬆️  Atualizando sistemas da sala '{sala}'...")
+    print("⏱️  Esta operação pode demorar vários minutos...")
+    results = update_all_systems_sala(sala)
+    
+    if results:
+        success_count = sum(1 for _, success, _ in results if success)
+        print(f"✅ Atualização iniciada em {success_count}/{len(results)} computadores")
+
+
+def install_package_menu():
+    """Menu para instalar pacotes."""
+    sala = select_sala()
+    if not sala:
+        return
+    
+    package = input("\n📦 Digite o nome do pacote a instalar: ").strip()
+    if not package:
+        print("❌ Nome do pacote não pode estar vazio.")
+        return
+    
+    confirm = input(f"\n⚠️  Confirma a instalação do pacote '{package}' na sala '{sala}'? (sim/não): ")
+    if confirm.lower() not in ['sim', 's', 'yes', 'y']:
+        print("❌ Operação cancelada.")
+        return
+    
+    print(f"\n📥 Instalando pacote '{package}' na sala '{sala}'...")
+    results = install_package_sala(sala, package)
+    
+    if results:
+        success_count = sum(1 for _, success, _ in results if success)
+        print(f"✅ Instalação iniciada em {success_count}/{len(results)} computadores")
+
+
+def custom_command_menu():
+    """Menu para comando personalizado."""
+    sala = select_sala()
+    if not sala:
+        return
+    
+    command = input("\n💻 Digite o comando a executar: ").strip()
+    if not command:
+        print("❌ Comando não pode estar vazio.")
+        return
+    
+    use_sudo = input("🔐 Executar com sudo? (s/n): ").lower().startswith('s')
+    
+    confirm = input(f"\n⚠️  Confirma execução do comando '{command}' na sala '{sala}'? (sim/não): ")
+    if confirm.lower() not in ['sim', 's', 'yes', 'y']:
+        print("❌ Operação cancelada.")
+        return
+    
+    print(f"\n⚡ Executando comando na sala '{sala}'...")
+    results = execute_custom_command_sala(sala, command, use_sudo)
+    
+    if results:
+        success_count = sum(1 for _, success, _ in results if success)
+        print(f"✅ Comando executado em {success_count}/{len(results)} computadores")
+
+
+def sala_report_menu():
+    """Menu para relatório completo de sala."""
+    sala = select_sala()
+    if not sala:
+        return
+    
+    print(f"\n📊 RELATÓRIO COMPLETO - SALA '{sala}'")
+    print("="*50)
+    
+    # Configuração da sala
+    config = get_sala_config(sala)
+    if config:
+        print(f"🖥️  Sistema Operacional: {config['os']}")
+        print(f"👤 Usuário: {config['username']}")
+        print(f"🔌 Porta SSH: {config['ssh_port']}")
+    else:
+        print("❌ Sala não configurada")
+        return
+    
+    # Computadores da sala
+    computers = load_computers_from_csv()
+    sala_computers = [(mac, ip, s) for mac, ip, s in computers if s.lower() == sala.lower()]
+    print(f"💻 Total de computadores: {len(sala_computers)}")
+    
+    # Teste de conectividade
+    print("\n🔍 Testando conectividade...")
+    connectivity = test_ssh_connection_by_sala(sala, timeout=3)
+    
+    if connectivity:
+        connected = sum(connectivity.values())
+        print(f"✅ Conectados: {connected}/{len(connectivity)}")
+        print(f"❌ Desconectados: {len(connectivity) - connected}")
+        
+        print("\n📋 Status detalhado:")
+        for mac, ip, _ in sala_computers:
+            status = "🟢 Online" if connectivity.get(ip, False) else "🔴 Offline"
+            print(f"   {ip} ({mac[-8:]}...): {status}")
 
 
 def main():
-    """Função principal com exemplos de uso do sistema."""
-
-    print("=== Sistema de Controle de Computadores ===\n")
-
-    # Configurações
-    USERNAME = "aluno"
-    PASSWORD = "in12345678"
-    CSV_FILE = "macs.csv"
-
-    print("📋 1. Carregando dados do CSV...")
-    mac_ip_data = load_macs_from_csv(CSV_FILE)
-    if mac_ip_data:
-        print(f"   ✓ Carregados {len(mac_ip_data)} computadores")
-        print(f"   📄 Exemplo: {mac_ip_data[0]}")
-    else:
-        print("   ❌ Nenhum dado encontrado no CSV")
+    """Função principal do sistema."""
+    print("🚀 Iniciando Sistema de Controle de Computadores por Salas...")
+    
+    # Carrega dados iniciais
+    computers = load_computers_from_csv()
+    if not computers:
+        print("❌ Erro: Arquivo computadores.csv não encontrado ou vazio!")
+        print("   Certifique-se de ter um arquivo CSV com formato: MAC,IP,Sala")
         return
-
-    print("\n🔍 2. Testando busca por IP específico...")
-    test_ip = "35.0.0.152"
-    mac_found = find_mac_by_ip(test_ip, CSV_FILE)
-    if mac_found:
-        print(f"   ✓ MAC para IP {test_ip}: {mac_found}")
-    else:
-        print(f"   ❌ MAC não encontrado para IP {test_ip}")
-
-    print("\n📡 3. Exemplo de comandos disponíveis:")
-    print("   • SSH: execute_ssh_command_on_multiple_hosts()")
-    print("   • Wake-on-LAN: wake_on_lan() ou wake_all_computers_from_csv()")
-    print("   • Gerenciar suspensão: prevent_sleep(), enable_sleep()")
-    print("   • Admin: install_package(), execute_poweroff(), restart_computers()")
-
-    # Exemplo de teste de conectividade (apenas 3 IPs para não sobrecarregar)
-    print("\n🔌 4. Testando conectividade SSH (primeiros 3 IPs)...")
-    test_ips = get_ips_only(CSV_FILE)[:3]
-
-    if test_ips:
-        results = execute_ssh_command_on_multiple_hosts(
-            command="hostname",
-            ip_generator=iter(test_ips),
-            password=PASSWORD,
-            username=USERNAME,
-            use_sudo=False,
-        )
-
-        success_count = sum(1 for _, success, _ in results if success)
-        print(
-            f"   📊 Conectividade: {success_count}/{len(test_ips)} computadores responderam"
-        )
-
-    print("\n💡 Exemplos de uso:")
-    print_usage_examples()
-
-
-def print_usage_examples():
-    """Imprime exemplos de como usar cada módulo."""
-
-    examples = [
-        "\n🚀 EXEMPLOS DE USO:",
-        "",
-        "# 1. Acordar todos os computadores:",
-        "wake_all_computers_from_csv('macs.csv')",
-        "",
-        "# 2. Executar comando em todos (via CSV):",
-        "execute_on_all_from_csv('hostname', 'senha', 'usuario')",
-        "",
-        "# 3. Instalar programa em todos:",
-        "ips = get_ips_only('macs.csv')",
-        "install_clonezilla(iter(ips), 'senha', 'usuario')",
-        "",
-        "# 4. Desligar todos os computadores:",
-        "ips = get_ips_only('macs.csv')",
-        "execute_poweroff(iter(ips), 'senha', 'usuario')",
-        "",
-        "# 5. Prevenir suspensão por 2 horas:",
-        "ips = get_ips_only('macs.csv')",
-        "keep_awake_temporarily(iter(ips), 'senha', hours=2, username='usuario')",
-        "",
-        "# 6. Obter informações do sistema:",
-        "ips = get_ips_only('macs.csv')",
-        "get_system_info(iter(ips), 'senha', 'usuario')",
-        "",
-        "# 7. Atualizar todos os sistemas:",
-        "ips = get_ips_only('macs.csv')",
-        "update_all_systems(iter(ips), 'senha', 'usuario')",
-        "",
-        "# 8. Gerar range de IPs:",
-        "ips = generate_ip_range('192.168.1', 10, 20)",
-        "execute_ssh_command_on_multiple_hosts('comando', ips, 'senha', 'usuario')",
-        "",
-        "# 9. Acordar computador específico:",
-        "mac = find_mac_by_ip('35.0.0.152', 'macs.csv')",
-        "wake_on_lan(mac)",
-    ]
-
-    for line in examples:
-        print(line)
-
-
-def quick_commands():
-    """Funções rápidas para tarefas comuns."""
-
-    USERNAME = "aluno"
-    PASSWORD = "in12345678"
-    CSV_FILE = "macs.csv"
-
-    # Descomente as funções que desejar usar:
-
-    # 1. Acordar todos os computadores
-    # wake_all_computers_from_csv(CSV_FILE)
-
-    # 2. Verificar conectividade de todos
-    # execute_on_all_from_csv("hostname", PASSWORD, USERNAME)
-
-    # 3. Prevenir suspensão por 1 hora
-    # ips = get_ips_only(CSV_FILE)
-    # keep_awake_temporarily(iter(ips), PASSWORD, hours=1, username=USERNAME)
-
-    # 4. Obter informações básicas
-    # ips = get_ips_only(CSV_FILE)
-    # get_system_info(iter(ips), PASSWORD, USERNAME)
-
-    # 5. Instalar clonezilla
-    # ips = get_ips_only(CSV_FILE)
-    # install_clonezilla(iter(ips), PASSWORD, USERNAME)
-
-    print("⚠️  Funções quick_commands() estão comentadas por segurança.")
-    print("    Descomente apenas as que desejar executar.")
+    
+    print(f"✅ Sistema carregado com {len(computers)} computadores")
+    
+    while True:
+        try:
+            show_menu()
+            choice = input("Digite sua escolha: ").strip()
+            
+            if choice == "0":
+                print("👋 Encerrando sistema...")
+                break
+            elif choice == "1":
+                show_salas_summary()
+            elif choice == "2":
+                wake_on_lan_menu()
+            elif choice == "3":
+                ssh_connectivity_menu()
+            elif choice == "4":
+                system_info_menu()
+            elif choice == "5":
+                poweroff_menu()
+            elif choice == "6":
+                restart_menu()
+            elif choice == "7":
+                update_systems_menu()
+            elif choice == "8":
+                install_package_menu()
+            elif choice == "9":
+                custom_command_menu()
+            elif choice == "10":
+                # Manter acordado - implementação simples
+                print("🔋 Função 'Manter Acordado' não implementada nesta versão por sala")
+            elif choice == "11":
+                sala_report_menu()
+            else:
+                print("❌ Opção inválida! Escolha um número de 0 a 11.")
+        
+        except KeyboardInterrupt:
+            print("\n\n👋 Sistema encerrado pelo usuário.")
+            break
+        except Exception as e:
+            print(f"\n❌ Erro inesperado: {e}")
+            print("   Continuando execução...")
 
 
 if __name__ == "__main__":
-    IPs_Zion = generate_ip_range("35.0.0", 136, 171)
-    
-    while True:
-        operacao = input("""
-Qual operação deseja realizar? 
-(1) Acordar todos os computadores
-(2) desligar todos os computadores
-(3) Testar conectividade SSH
-(4) manter acordado por 1 hora
-(5) Atualizar todos os sistemas
-: """)
-        match operacao:
-            case "1":
-                qnt = wake_all_computers_from_csv("macs.csv")
-                print(f"Wake-on-LAN enviado {qnt} acordados.")
-            case "2":
-                qnt = execute_poweroff(IPs_Zion, "in12345678", "aluno")
-                print(f"Desligamento enviado {qnt} computadores.")
-            case "3":
-                comando = input("Qual comando deseja executar? ")
-                resultado = execute_ssh_command_on_multiple_hosts(
-                    comando, IPs_Zion, "in12345678", "aluno", use_sudo=True
-                )
-                print(resultado)
-            case "4":
-                resultado = keep_awake_temporarily(IPs_Zion, "in12345678", hours=1, username="aluno")
-                print(resultado)
-            case "5":
-                resultado = update_all_systems(IPs_Zion, "in12345678", "aluno")
-                print(resultado)
-            case _:
-                print("Operação inválida.")
+    main()
