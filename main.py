@@ -3,6 +3,8 @@ Sistema de Controle de Computadores por Salas - Arquivo Principal
 Gerencia múltiplos computadores via SSH e Wake-on-LAN organizados por salas
 """
 
+import getpass
+
 from ssh_manager import test_ssh_connection_by_sala
 from csv_manager import (
     load_computers_from_csv,
@@ -18,6 +20,9 @@ from admin_tasks import (
     execute_custom_command_sala
 )
 from sala_config import get_available_salas, get_sala_config
+from auth.database import Base, SessionLocal, engine
+from auth.models import User
+from auth.security import hash_password
 
 
 def show_menu():
@@ -39,6 +44,8 @@ def show_menu():
     print("  🔟 Manter acordado (temporário)")
     print("\n📊 DIAGNÓSTICO:")
     print("  11  Relatório completo de sala")
+    print("\n👥 USUÁRIOS DO SISTEMA:")
+    print("  12  Gerenciar usuários (TI)")
     print("\n❌ 0   Sair")
     print("-"*60)
 
@@ -306,10 +313,138 @@ def sala_report_menu():
             print(f"   {ip} ({mac[-8:]}...): {status}")
 
 
+def list_users_menu():
+    """Lista os usuários cadastrados no sistema."""
+    db = SessionLocal()
+    try:
+        users = db.query(User).order_by(User.id).all()
+        if not users:
+            print("❌ Nenhum usuário cadastrado.")
+            return
+
+        print(f"\n📋 {len(users)} usuário(s) cadastrado(s):")
+        for u in users:
+            status = "ativo" if u.is_active else "inativo"
+            print(f"   #{u.id} {u.name} | login: {u.login} | cargo: {u.cargo} | {status}")
+    finally:
+        db.close()
+
+
+def create_user_menu():
+    """Cria um novo usuário do sistema (nome, login, senha e cargo)."""
+    print("\n➕ CRIAR USUÁRIO")
+    name = input("Nome completo: ").strip()
+    login = input("Login: ").strip()
+
+    if not name or not login:
+        print("❌ Nome e login são obrigatórios.")
+        return
+
+    db = SessionLocal()
+    try:
+        if db.query(User).filter(User.login == login).first():
+            print(f"❌ Já existe um usuário com o login '{login}'.")
+            return
+
+        password = getpass.getpass("Senha: ")
+        confirm = getpass.getpass("Confirme a senha: ")
+        if not password or password != confirm:
+            print("❌ As senhas não coincidem ou estão vazias.")
+            return
+
+        cargo = input("Cargo (padrão: TI): ").strip() or "TI"
+
+        user = User(name=name, login=login, password_hash=hash_password(password), cargo=cargo)
+        db.add(user)
+        db.commit()
+        print(f"✅ Usuário '{login}' ({cargo}) criado com sucesso.")
+    finally:
+        db.close()
+
+
+def reset_password_menu():
+    """Redefine a senha de um usuário existente."""
+    print("\n🔑 REDEFINIR SENHA")
+    login = input("Login do usuário: ").strip()
+
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.login == login).first()
+        if not user:
+            print(f"❌ Usuário '{login}' não encontrado.")
+            return
+
+        password = getpass.getpass("Nova senha: ")
+        confirm = getpass.getpass("Confirme a nova senha: ")
+        if not password or password != confirm:
+            print("❌ As senhas não coincidem ou estão vazias.")
+            return
+
+        user.password_hash = hash_password(password)
+        db.commit()
+        print(f"✅ Senha de '{login}' atualizada com sucesso.")
+    finally:
+        db.close()
+
+
+def delete_user_menu():
+    """Remove um usuário do sistema."""
+    print("\n🗑️  REMOVER USUÁRIO")
+    login = input("Login do usuário a remover: ").strip()
+
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.login == login).first()
+        if not user:
+            print(f"❌ Usuário '{login}' não encontrado.")
+            return
+
+        confirm = input(f"⚠️  Confirma a remoção do usuário '{login}'? (sim/não): ")
+        if confirm.lower() not in ['sim', 's', 'yes', 'y']:
+            print("❌ Operação cancelada.")
+            return
+
+        db.delete(user)
+        db.commit()
+        print(f"✅ Usuário '{login}' removido.")
+    finally:
+        db.close()
+
+
+def users_menu():
+    """Submenu para gerenciar usuários do sistema (correção manual via terminal)."""
+    while True:
+        print("\n👥 GERENCIAR USUÁRIOS")
+        print("-"*50)
+        print("  1. Listar usuários")
+        print("  2. Criar usuário")
+        print("  3. Redefinir senha")
+        print("  4. Remover usuário")
+        print("  0. Voltar")
+
+        choice = input("\nEscolha uma opção: ").strip()
+
+        if choice == "0":
+            return
+        elif choice == "1":
+            list_users_menu()
+        elif choice == "2":
+            create_user_menu()
+        elif choice == "3":
+            reset_password_menu()
+        elif choice == "4":
+            delete_user_menu()
+        else:
+            print("❌ Opção inválida.")
+
+
 def main():
     """Função principal do sistema."""
     print("🚀 Iniciando Sistema de Controle de Computadores por Salas...")
-    
+
+    # Garante que a tabela de usuários exista (caso a API nunca tenha rodado)
+    Base.metadata.create_all(bind=engine)
+
     # Carrega dados iniciais
     computers = load_computers_from_csv()
     if not computers:
@@ -350,8 +485,10 @@ def main():
                 print("🔋 Função 'Manter Acordado' não implementada nesta versão por sala")
             elif choice == "11":
                 sala_report_menu()
+            elif choice == "12":
+                users_menu()
             else:
-                print("❌ Opção inválida! Escolha um número de 0 a 11.")
+                print("❌ Opção inválida! Escolha um número de 0 a 12.")
         
         except KeyboardInterrupt:
             print("\n\n👋 Sistema encerrado pelo usuário.")
