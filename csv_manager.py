@@ -8,9 +8,10 @@ import csv
 from typing import List, Tuple, Dict
 from power_manager import wake_on_lan
 from sala_config import get_sala_config
+from config import COMPUTERS_CSV_PATH, WOL_BROADCAST_IP
 
 
-def load_computers_from_csv(csv_file_path: str = "computadores.csv") -> List[Tuple[str, str, str]]:
+def load_computers_from_csv(csv_file_path: str = COMPUTERS_CSV_PATH) -> List[Tuple[str, str, str]]:
     """
     Carrega a lista de computadores com MAC, IP e Sala do arquivo CSV.
     
@@ -55,7 +56,7 @@ def load_computers_from_csv(csv_file_path: str = "computadores.csv") -> List[Tup
         return computers_list
 
 
-def get_computers_by_sala(sala_name: str, csv_file_path: str = "computadores.csv") -> List[Tuple[str, str, str]]:
+def get_computers_by_sala(sala_name: str, csv_file_path: str = COMPUTERS_CSV_PATH) -> List[Tuple[str, str, str]]:
     """
     Retorna computadores de uma sala específica.
     
@@ -70,7 +71,7 @@ def get_computers_by_sala(sala_name: str, csv_file_path: str = "computadores.csv
     return [(mac, ip, sala) for mac, ip, sala in all_computers if sala.lower() == sala_name.lower()]
 
 
-def get_macs_by_sala(sala_name: str, csv_file_path: str = "computadores.csv") -> List[str]:
+def get_macs_by_sala(sala_name: str, csv_file_path: str = COMPUTERS_CSV_PATH) -> List[str]:
     """
     Retorna apenas MACs de uma sala específica.
     
@@ -85,7 +86,7 @@ def get_macs_by_sala(sala_name: str, csv_file_path: str = "computadores.csv") ->
     return [mac for mac, _, _ in computers]
 
 
-def get_ips_by_sala(sala_name: str, csv_file_path: str = "computadores.csv") -> List[str]:
+def get_ips_by_sala(sala_name: str, csv_file_path: str = COMPUTERS_CSV_PATH) -> List[str]:
     """
     Retorna apenas IPs de uma sala específica.
     
@@ -100,7 +101,7 @@ def get_ips_by_sala(sala_name: str, csv_file_path: str = "computadores.csv") -> 
     return [ip for _, ip, _ in computers]
 
 
-def get_sala_by_ip(ip: str, csv_file_path: str = "computadores.csv") -> str:
+def get_sala_by_ip(ip: str, csv_file_path: str = COMPUTERS_CSV_PATH) -> str:
     """
     Encontra a sala de um IP específico.
     
@@ -118,7 +119,7 @@ def get_sala_by_ip(ip: str, csv_file_path: str = "computadores.csv") -> str:
     return ""
 
 
-def get_computer_info(ip: str, csv_file_path: str = "computadores.csv") -> Dict[str, str]:
+def get_computer_info(ip: str, csv_file_path: str = COMPUTERS_CSV_PATH) -> Dict[str, str]:
     """
     Retorna informações completas de um computador pelo IP.
     
@@ -147,7 +148,7 @@ def get_computer_info(ip: str, csv_file_path: str = "computadores.csv") -> Dict[
     return {}
 
 
-def wake_computers_by_sala(sala_name: str, csv_file_path: str = "computadores.csv", debug: bool = False) -> int:
+def wake_computers_by_sala(sala_name: str, csv_file_path: str = COMPUTERS_CSV_PATH, debug: bool = False) -> int:
     """
     Envia Wake-on-LAN para todos os computadores de uma sala.
     
@@ -180,7 +181,7 @@ def wake_computers_by_sala(sala_name: str, csv_file_path: str = "computadores.cs
     return success_count
 
 
-def list_salas_summary(csv_file_path: str = "computadores.csv") -> Dict[str, int]:
+def list_salas_summary(csv_file_path: str = COMPUTERS_CSV_PATH) -> Dict[str, int]:
     """
     Lista resumo de computadores por sala.
     
@@ -199,7 +200,7 @@ def list_salas_summary(csv_file_path: str = "computadores.csv") -> Dict[str, int
     return salas_count
 
 
-def validate_sala_name(sala_name: str, csv_file_path: str = "computadores.csv") -> bool:
+def validate_sala_name(sala_name: str, csv_file_path: str = COMPUTERS_CSV_PATH) -> bool:
     """
     Valida se o nome da sala existe no CSV.
     
@@ -215,7 +216,7 @@ def validate_sala_name(sala_name: str, csv_file_path: str = "computadores.csv") 
 
 
 # Funções para manter compatibilidade com versões antigas
-def load_macs_from_csv(csv_file_path: str = "computadores.csv") -> List[Tuple[str, str]]:
+def load_macs_from_csv(csv_file_path: str = COMPUTERS_CSV_PATH) -> List[Tuple[str, str]]:
     """
     DEPRECATED: Use load_computers_from_csv para funcionalidade completa.
     Mantido para compatibilidade.
@@ -224,7 +225,7 @@ def load_macs_from_csv(csv_file_path: str = "computadores.csv") -> List[Tuple[st
     return [(mac, ip) for mac, ip, _ in computers]
 
 
-def get_macs_only(csv_file_path: str = "computadores.csv") -> List[str]:
+def get_macs_only(csv_file_path: str = COMPUTERS_CSV_PATH) -> List[str]:
     """
     DEPRECATED: Use get_macs_by_sala para funcionalidade por sala.
     Retorna todos os MACs (todas as salas).
@@ -233,7 +234,7 @@ def get_macs_only(csv_file_path: str = "computadores.csv") -> List[str]:
     return [mac for mac, _, _ in computers]
 
 
-def get_ips_only(csv_file_path: str = "computadores.csv") -> List[str]:
+def get_ips_only(csv_file_path: str = COMPUTERS_CSV_PATH) -> List[str]:
     """
     DEPRECATED: Use get_ips_by_sala para funcionalidade por sala.
     Retorna todos os IPs (todas as salas).
@@ -242,7 +243,7 @@ def get_ips_only(csv_file_path: str = "computadores.csv") -> List[str]:
     return [ip for _, ip, _ in computers]
 
 
-def find_mac_by_ip(ip: str, csv_file_path: str = "computadores.csv") -> str:
+def find_mac_by_ip(ip: str, csv_file_path: str = COMPUTERS_CSV_PATH) -> str:
     """
     Encontra o endereço MAC correspondente a um IP específico.
     
@@ -260,7 +261,7 @@ def find_mac_by_ip(ip: str, csv_file_path: str = "computadores.csv") -> str:
     return ""
 
 
-def find_ip_by_mac(mac: str, csv_file_path: str = "computadores.csv") -> str:
+def find_ip_by_mac(mac: str, csv_file_path: str = COMPUTERS_CSV_PATH) -> str:
     """
     Encontra o IP correspondente a um endereço MAC específico.
     
@@ -281,7 +282,7 @@ def find_ip_by_mac(mac: str, csv_file_path: str = "computadores.csv") -> str:
     return ""
 
 
-def wake_all_computers_from_csv(csv_file_path: str = "computadores.csv", broadcast_ip: str = "255.255.255.255", debug: bool = False) -> int:
+def wake_all_computers_from_csv(csv_file_path: str = COMPUTERS_CSV_PATH, broadcast_ip: str = WOL_BROADCAST_IP, debug: bool = False) -> int:
     """
     DEPRECATED: Use wake_computers_by_sala para funcionalidade por sala.
     Envia Wake-on-LAN para todos os computadores do arquivo CSV.

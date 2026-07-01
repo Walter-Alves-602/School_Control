@@ -5,6 +5,7 @@ Módulo para gerenciamento de suspensão/ativação e Wake-on-LAN.
 import socket
 from typing import Iterator, List, Tuple
 from ssh_manager import execute_ssh_command_on_multiple_hosts
+from config import WOL_BROADCAST_IP
 
 
 def prevent_sleep(ip_generator: Iterator[str], password: str, username: str = "user") -> List[Tuple[str, bool, str]]:
@@ -49,7 +50,7 @@ def enable_sleep(ip_generator: Iterator[str], password: str, username: str = "us
     )
 
 
-def wake_on_lan(mac_address: str, broadcast_ip: str = "255.255.255.255") -> bool:
+def wake_on_lan(mac_address: str, broadcast_ip: str = WOL_BROADCAST_IP) -> bool:
     """
     Envia pacote Wake-on-LAN para acordar computador suspenso.
     

@@ -7,14 +7,16 @@ import socket
 import time
 from typing import Iterator, List, Tuple, Dict
 
+from config import COMPUTERS_CSV_PATH, DEFAULT_SSH_PORT, DEFAULT_SSH_TIMEOUT
+
 
 def execute_ssh_command_on_multiple_hosts(
     command: str,
     ip_generator: Iterator[str],
     password: str,
     username: str = "user",
-    port: int = 22,
-    timeout: int = 10,
+    port: int = DEFAULT_SSH_PORT,
+    timeout: int = DEFAULT_SSH_TIMEOUT,
     use_sudo: bool = False
 ) -> List[Tuple[str, bool, str]]:
     """
@@ -121,8 +123,8 @@ def execute_ssh_command_by_sala(
     command: str,
     sala_name: str,
     use_sudo: bool = False,
-    timeout: int = 10,
-    csv_file_path: str = "computadores.csv"
+    timeout: int = DEFAULT_SSH_TIMEOUT,
+    csv_file_path: str = COMPUTERS_CSV_PATH
 ) -> List[Tuple[str, bool, str]]:
     """
     Executa comando SSH em todos os computadores de uma sala específica.
@@ -178,8 +180,8 @@ def execute_ssh_command_on_specific_ip(
     command: str,
     ip: str,
     use_sudo: bool = False,
-    timeout: int = 10,
-    csv_file_path: str = "computadores.csv"
+    timeout: int = DEFAULT_SSH_TIMEOUT,
+    csv_file_path: str = COMPUTERS_CSV_PATH
 ) -> Tuple[str, bool, str]:
     """
     Executa comando SSH em um IP específico usando configurações da sala.
@@ -226,7 +228,7 @@ def execute_ssh_command_on_specific_ip(
 def test_ssh_connection_by_sala(
     sala_name: str,
     timeout: int = 5,
-    csv_file_path: str = "computadores.csv"
+    csv_file_path: str = COMPUTERS_CSV_PATH
 ) -> Dict[str, bool]:
     """
     Testa conectividade SSH de todos os computadores de uma sala.
