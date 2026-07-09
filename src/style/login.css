@@ -1,14 +1,12 @@
 * {
   margin: 0;
   padding: 0;
-  box-sizing: 0;
+  box-sizing: border-box;
 }
 
 :root {
   --primaryColor: #090909;
   --securyColor: #A8181E;
-  --colorTextprimary : #F4F4F4;
-  --colorTextosucundary: #A3A3A3;
 }
 
 
@@ -17,26 +15,4 @@ header{
     text-align: end;
     padding: 1rem;
     color: var(--securyColor);
-}
-
-#formulario{
-  display: flex;
-  justify-content: space-evenly;
-  align-items: center;
-  text-align: center;
-  background-color: #000000;
-}
-
-#formulario img{
-  max-height: 900px;
-  position: relative;
-  right: 8.8rem;
-  border-right: 2px solid red;
-  
-}
-
-form{
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
 }
