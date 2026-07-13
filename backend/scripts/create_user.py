@@ -14,23 +14,22 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from auth.database import Base, SessionLocal, engine  # noqa: E402
-from auth.models import User  # noqa: E402
-from auth.security import hash_password  # noqa: E402
+from adapters.db import Base, SessionLocal, SqlAlchemyUserRepository, engine  # noqa: E402
+from adapters.security import BcryptPasswordHasher  # noqa: E402
+from application.user_service import UserService  # noqa: E402
+from domain.errors import DuplicateLoginError  # noqa: E402
 
 
 def create_user(name: str, login: str, password: str, cargo: str) -> None:
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        if db.query(User).filter(User.login == login).first():
+        service = UserService(SqlAlchemyUserRepository(db), BcryptPasswordHasher())
+        try:
+            service.create_user(name, login, password, cargo)
+            print(f"✅ Usuário '{login}' ({cargo}) criado com sucesso.")
+        except DuplicateLoginError:
             print(f"❌ Já existe um usuário com o login '{login}'.")
-            return
-
-        user = User(name=name, login=login, password_hash=hash_password(password), cargo=cargo)
-        db.add(user)
-        db.commit()
-        print(f"✅ Usuário '{login}' ({cargo}) criado com sucesso.")
     finally:
         db.close()
 

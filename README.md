@@ -4,37 +4,56 @@ Sistema para gerenciamento remoto de computadores organizados por salas/laborat�
 com suporte a diferentes sistemas operacionais. Funciona para **qualquer escola**:
 toda a configuração específica (rede, salas, credenciais) vem de um arquivo `.env`.
 
-O sistema expõe uma **API (FastAPI)** para ser consumida por uma interface web (feita
-separadamente) e também pode ser usado via **linha de comando** (`main.py`).
+O projeto é dividido em duas pastas: `backend/` (API FastAPI + CLI, em
+**arquitetura hexagonal**) e `frontend/` (interface web em React/Vite). O
+backend expõe uma **API (FastAPI)** consumida pelo frontend e também pode ser
+usado via **linha de comando** (`entrypoints/cli.py`).
 
 ## 📁 Estrutura do Projeto
 
 ```
 CCI/
-├── .env                    # Configuração local desta escola (NÃO versionado)
-├── .env.example            # Modelo de configuração (versionado)
-├── config.py               # Carrega o .env e monta a configuração de cada sala
-├── sala_config.py          # Consulta de configuração/comandos por sala
-├── csv_manager.py          # Leitura do CSV com MAC, IP e Sala dos computadores
-├── ssh_manager.py          # Conexões e comandos SSH
-├── power_manager.py        # Wake-on-LAN e gerenciamento de energia
-├── admin_tasks.py          # Tarefas administrativas por sala (desligar, reiniciar, etc)
-├── computadores.csv        # Inventário de computadores (MAC, IP, Sala)
-├── main.py                 # Interface de linha de comando
-├── api.py                  # API FastAPI (usada pela interface web)
-├── auth/                   # Autenticação e usuários (SQLite)
-│   ├── database.py
-│   ├── models.py
-│   ├── schemas.py
-│   ├── security.py         # Hash de senha (bcrypt) e JWT
-│   └── deps.py             # Dependências de autenticação/autorização
-├── routers/                 # Rotas da API
-│   ├── auth_router.py
-│   ├── users_router.py
-│   └── salas_router.py
-├── scripts/
-│   └── create_user.py      # Cria usuários (nome, login, senha, cargo)
-└── requirements.txt
+├── backend/
+│   ├── .env                    # Configuração local desta escola (NÃO versionado)
+│   ├── .env.example            # Modelo de configuração (versionado)
+│   ├── config.py               # Carrega o .env e monta a configuração de cada sala
+│   ├── computadores.csv        # Inventário de computadores (MAC, IP, Sala)
+│   ├── users.db                # Banco SQLite dos usuários (NÃO versionado)
+│   ├── requirements.txt
+│   ├── domain/                 # Núcleo: entidades + portas (sem dependência de framework)
+│   │   ├── entities.py         # User, Sala, Computador
+│   │   ├── ports.py            # Interfaces: UserRepository, ComputerRepository,
+│   │   │                       #   RemoteExecutor, WakeOnLanSender, PasswordHasher, TokenService
+│   │   └── errors.py           # Erros de domínio (traduzidos para HTTP nos entrypoints)
+│   ├── application/            # Casos de uso, dependem só das portas do domínio
+│   │   ├── auth_service.py     # Login, resolução do usuário autenticado
+│   │   ├── user_service.py     # CRUD de usuários do sistema
+│   │   └── sala_service.py     # Consulta de salas, Wake-on-LAN, SSH remoto
+│   ├── adapters/                # Implementações concretas das portas
+│   │   ├── db.py                 # SQLAlchemy (engine/session + UserModel + repositório)
+│   │   ├── csv_repository.py     # Leitura do CSV + configuração de sala (.env)
+│   │   ├── ssh_executor.py       # Comandos remotos via paramiko
+│   │   ├── wol_sender.py         # Wake-on-LAN (broadcast UDP)
+│   │   └── security.py           # Hash de senha (bcrypt) e JWT
+│   ├── entrypoints/              # API (FastAPI) e CLI — "driving side"
+│   │   ├── api.py                 # Composition root + FastAPI app + tradução de erros
+│   │   ├── api_deps.py            # Depends(): serviços, autenticação/autorização
+│   │   ├── schemas.py             # Modelos Pydantic de request/response
+│   │   ├── cli.py                 # Menu de terminal (mesmos casos de uso da API)
+│   │   └── routers/
+│   │       ├── auth_router.py
+│   │       ├── users_router.py
+│   │       └── salas_router.py
+│   ├── scripts/
+│   │   └── create_user.py      # Cria usuários (nome, login, senha, cargo)
+│   └── tools/                   # Scripts avulsos de diagnóstico (não fazem parte do app)
+│       ├── teste_sistema.py
+│       └── diagnostics/         # Scripts manuais de diagnóstico de Wake-on-LAN (legado)
+└── frontend/
+    ├── index.html
+    ├── vite.config.js
+    ├── package.json
+    └── src/                     # App React (login, dashboard, componentes, estilos)
 ```
 
 ## ⚙️ Configuração (.env)
@@ -75,11 +94,21 @@ MAC,IP,Sala
 
 ## 🚀 Instalação
 
+Backend:
+
 ```bash
+cd backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env   # e edite com os dados da sua escola
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm install
 ```
 
 ## 👤 Usuários e autenticação
@@ -88,7 +117,7 @@ Os usuários (nome, login, senha e cargo) ficam em um banco SQLite. Apenas
 usuários com cargo igual a `ALLOWED_CARGO` (padrão `"TI"`) conseguem usar a
 API — usuários com outro cargo até fazem login, mas recebem `403`.
 
-Crie o primeiro usuário TI:
+Crie o primeiro usuário TI (a partir da pasta `backend/`):
 
 ```bash
 python scripts/create_user.py --name "Fulano da Silva" --login fulano --cargo TI
@@ -99,8 +128,10 @@ nenhum arquivo).
 
 ## 🌐 Executando a API
 
+A partir da pasta `backend/`:
+
 ```bash
-uvicorn api:app --host 0.0.0.0 --port 8000
+uvicorn entrypoints.api:app --host 0.0.0.0 --port 8000
 ```
 
 Documentação interativa (Swagger) em `http://localhost:8000/docs`.
@@ -142,11 +173,21 @@ com um token válido de um usuário TI.
 
 ## 🖥️ Uso via terminal
 
+A partir da pasta `backend/`:
+
 ```bash
-python main.py
+python -m entrypoints.cli
 ```
 
-Menu interativo com as mesmas operações disponíveis na API.
+Menu interativo com as mesmas operações disponíveis na API (usa os mesmos
+casos de uso em `application/`).
+
+## 💻 Executando o frontend
+
+```bash
+cd frontend
+npm run dev
+```
 
 ## 🔧 Sistemas operacionais suportados
 
