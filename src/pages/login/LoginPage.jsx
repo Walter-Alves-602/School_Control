@@ -1,3 +1,4 @@
+import { useState } from "react";
 import "../../styles/pages/login.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -14,6 +15,7 @@ import {
 } from "../../components/login/LoginIcons";
 import BannerLogin from "../../assets/images/inspiracao/BannerAvatar.png";
 import Fenix from "../../assets/images/fenix.png";
+import { login } from "../../api/authApi";
 
 function PhoenixLogo({ className = "Fenix" }) {
   return (
@@ -25,7 +27,27 @@ function PhoenixLogo({ className = "Fenix" }) {
   );
 }
 
-function LoginPage() {
+function LoginPage({ onLoginSuccess }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const token = await login(username, password);
+      onLoginSuccess(token);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <main className="login-shell">
       <section className="login-card" aria-label="Tela de login Infinity Stock">
@@ -62,15 +84,18 @@ function LoginPage() {
               <p>Faca login para acessar sua conta</p>
             </div>
 
-            <form className="login-form">
+            <form className="login-form" onSubmit={handleSubmit}>
               <label className="field-group" htmlFor="email">
                 <span>E-MAIL</span>
                 <div className="field-control">
                   <EmailIcon />
                   <input
                     id="email"
-                    type="email"
+                    type="text"
                     placeholder="Digite seu e-mail"
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    required
                   />
                 </div>
               </label>
@@ -83,6 +108,9 @@ function LoginPage() {
                     id="password"
                     type="password"
                     placeholder="Digite sua senha"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
                   />
                   <button
                     type="button"
@@ -102,9 +130,11 @@ function LoginPage() {
                 <a href="#recuperar">Esqueceu sua senha?</a>
               </div>
 
-              <button type="submit" className="submit-button">
+              {error && <p className="login-form__error">{error}</p>}
+
+              <button type="submit" className="submit-button" disabled={loading}>
                 <ArrowEnterIcon />
-                <span>Entrar</span>
+                <span>{loading ? "Entrando..." : "Entrar"}</span>
               </button>
             </form>
 
