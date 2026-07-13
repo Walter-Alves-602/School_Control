@@ -35,3 +35,4 @@ dist-ssr
 coverage/
 .eslintcache
 *.tsbuildinfo
+backend/users.db
