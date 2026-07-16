@@ -1,11 +1,6 @@
 import { useState } from "react";
 import "../../styles/pages/login.css";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faBrave,
-  faGithub,
-  faMicrosoft,
-} from "@fortawesome/free-brands-svg-icons";
+
 import {
   ArrowEnterIcon,
   Crown,
@@ -85,14 +80,14 @@ function LoginPage({ onLoginSuccess }) {
             </div>
 
             <form className="login-form" onSubmit={handleSubmit}>
-              <label className="field-group" htmlFor="email">
-                <span>E-MAIL</span>
+              <label className="field-group" htmlFor="login">
+                <span>LOGIN</span>
                 <div className="field-control">
                   <EmailIcon />
                   <input
-                    id="email"
+                    id="login"
                     type="text"
-                    placeholder="Digite seu e-mail"
+                    placeholder="Digite seu login"
                     value={username}
                     onChange={(event) => setUsername(event.target.value)}
                     required
@@ -138,38 +133,6 @@ function LoginPage({ onLoginSuccess }) {
               </button>
             </form>
 
-            <div className="social-login" aria-label="Outras opcoes de login">
-              <div className="social-login__divider">
-                <span>ou continue com</span>
-              </div>
-
-              <div className="social-login__buttons">
-                <button type="button" className="social-button">
-                  <FontAwesomeIcon
-                    icon={faBrave}
-                    className="social-button__icon"
-                    style={{ color: "rgb(255, 53, 53)" }}
-                  />
-                  <span>Google</span>
-                </button>
-                <button type="button" className="social-button">
-                  <FontAwesomeIcon
-                    icon={faMicrosoft}
-                    className="social-button__icon"
-                    style={{ color: "rgb(255, 53, 53)" }}
-                  />
-                  <span>Microsoft</span>
-                </button>
-                <button type="button" className="social-button">
-                  <FontAwesomeIcon
-                    icon={faGithub}
-                    className="social-button__icon"
-                    style={{ color: "rgb(255, 53, 53)" }}
-                  />
-                  <span>GitHub</span>
-                </button>
-              </div>
-            </div>
 
             <p className="panel-footer">
               © 2026 DevWizardMaros. Todos os direitos reservados.

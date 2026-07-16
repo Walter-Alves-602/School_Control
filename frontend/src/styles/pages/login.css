@@ -396,61 +396,13 @@ a {
   filter: brightness(1.05);
 }
 
-.social-login {
-  margin-top: 46px;
-}
 
-.social-login__divider {
-  position: relative;
-  margin-bottom: 30px;
-  text-align: center;
-  color: var(--soft);
-}
 
-.social-login__divider::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  border-top: 1px solid var(--line);
-}
 
-.social-login__divider span {
-  position: relative;
-  padding: 0 16px;
-  background: #080809;
-}
 
-.social-login__buttons {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
 
-.social-button {
-  min-height: 58px;
-  border-radius: 10px;
-  border: 1px solid var(--field-border);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.02),
-    rgba(255, 255, 255, 0.03)
-  );
-  color: #f6f6f6;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  cursor: pointer;
-}
 
-.social-button__icon {
-  width: 22px;
-  height: 22px;
-  font-size: 1.2rem;
-  flex: 0 0 auto;
-}
+
 
 .panel-footer {
   margin-top: 62px;
@@ -520,9 +472,6 @@ a {
     align-items: flex-start;
   }
 
-  .social-login__buttons {
-    grid-template-columns: 1fr;
-  }
 
   .panel-footer {
     margin-top: 36px;
