@@ -4,6 +4,14 @@ Usa os mesmos casos de uso (application/) e adapters da API.
 """
 
 import getpass
+import sys
+from pathlib import Path
+
+# Permite executar este arquivo diretamente, por exemplo:
+# python entrypoints/cli.py
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
 
 from adapters.csv_repository import CsvComputerRepository
 from adapters.db import Base, SessionLocal, SqlAlchemyUserRepository, engine
